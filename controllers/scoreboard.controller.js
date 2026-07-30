@@ -25,18 +25,18 @@ async function getScoreboard(req, res) {
     let query = `
       SELECT r.score, r.difficulty, r.date, u.username
       FROM results r
-      JOIN users u ON u.id = r.userId
+      JOIN users u ON u.id = r."userId"
     `;
     const params = [];
 
     if (difficulty && ['EASY', 'MEDIUM', 'HARD'].includes(difficulty)) {
-      query += ` WHERE r.difficulty = ?`;
+      query += ` WHERE r.difficulty = $1`;
       params.push(difficulty);
     }
 
     query += ` ORDER BY r.score DESC, r.date DESC LIMIT 10`;
 
-    const [rows] = await pool.query(query, params);
+    const { rows } = await pool.query(query, params);
     const entries = rows.map(row => ({ username: row.username, score: row.score, difficulty: row.difficulty, date: row.date }));
     res.json(entries);
   } catch (err) {
@@ -67,14 +67,14 @@ async function submitResult(req, res) {
     const db = require('../db');
     const pool = db.getPool();
 
-    const [existingRows] = await pool.query(
-      'SELECT id, score FROM results WHERE userId = ? AND difficulty = ? ORDER BY score DESC, date DESC LIMIT 1',
+    const { rows: existingRows } = await pool.query(
+      'SELECT id, score FROM results WHERE "userId" = $1 AND difficulty = $2 ORDER BY score DESC, date DESC LIMIT 1',
       [user.id, diff]
     );
 
     const coinsEarned = calculatePlayReward(score, diff);
     if (coinsEarned > 0) {
-      await pool.query('UPDATE users SET coins = coins + ? WHERE id = ?', [coinsEarned, user.id]);
+      await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [coinsEarned, user.id]);
       logger.info('Added play reward coins', { userId: user.id, difficulty: diff, score, coinsEarned });
     }
 
@@ -82,9 +82,9 @@ async function submitResult(req, res) {
 
     if (score > currentBest) {
       if (existingRows[0]?.id) {
-        await pool.query('UPDATE results SET score = ?, date = NOW() WHERE id = ?', [score, existingRows[0].id]);
+        await pool.query('UPDATE results SET score = $1, date = NOW() WHERE id = $2', [score, existingRows[0].id]);
       } else {
-        await pool.query('INSERT INTO results (userId, score, difficulty, date) VALUES (?, ?, ?, NOW())', [user.id, score, diff]);
+        await pool.query('INSERT INTO results ("userId", score, difficulty, date) VALUES ($1, $2, $3, NOW())', [user.id, score, diff]);
       }
       return res.json({ ok: true, updated: true, difficulty: diff, score, coinsEarned });
     }

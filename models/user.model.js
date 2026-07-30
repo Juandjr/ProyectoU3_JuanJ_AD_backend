@@ -6,12 +6,12 @@ const db = require('../db');
 
 async function find(filter = {}, projection = {}) {
   const pool = db.getPool();
-  const [users] = await pool.query('SELECT id, username FROM users');
+  const { rows: users } = await pool.query('SELECT id, username FROM users');
   // Load results for each user
   const userIds = users.map(u => u.id);
   let resultsMap = {};
   if (userIds.length > 0) {
-    const [rows] = await pool.query('SELECT id, userId, score, difficulty, date FROM results WHERE userId IN (?)', [userIds]);
+    const { rows } = await pool.query('SELECT id, "userId", score, difficulty, date FROM results WHERE "userId" = ANY($1::int[])', [userIds]);
     rows.forEach(r => {
       if (!resultsMap[r.userId]) resultsMap[r.userId] = [];
       resultsMap[r.userId].push({ score: r.score, difficulty: r.difficulty, date: r.date });
@@ -22,17 +22,17 @@ async function find(filter = {}, projection = {}) {
 
 async function findById(id) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT id, username, email FROM users WHERE id = ? LIMIT 1', [id]);
+  const { rows } = await pool.query('SELECT id, username, email FROM users WHERE id = $1 LIMIT 1', [id]);
   if (rows.length === 0) return null;
   const user = rows[0];
-  const [resRows] = await pool.query('SELECT id, score, difficulty, date FROM results WHERE userId = ? ORDER BY date DESC', [id]);
+  const { rows: resRows } = await pool.query('SELECT id, score, difficulty, date FROM results WHERE "userId" = $1 ORDER BY date DESC', [id]);
   user.results = resRows.map(r => ({ score: r.score, difficulty: r.difficulty, date: r.date }));
 
   // Attach save method to allow pushing new results and saving
   user.save = async function () {
     if (!this._pendingResult) return;
     const diff = ['EASY', 'MEDIUM', 'HARD'].includes(this._pendingResult.difficulty) ? this._pendingResult.difficulty : 'MEDIUM';
-    await pool.query('INSERT INTO results (userId, score, difficulty) VALUES (?, ?, ?)', [this.id, this._pendingResult.score, diff]);
+    await pool.query('INSERT INTO results ("userId", score, difficulty) VALUES ($1, $2, $3)', [this.id, this._pendingResult.score, diff]);
     delete this._pendingResult;
   };
 

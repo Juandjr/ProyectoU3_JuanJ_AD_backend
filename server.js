@@ -367,10 +367,10 @@ io.on('connection', (socket) => {
         try {
             if (dbConnected && userId) {
                 const pool = db.getPool();
-                const [userRows] = await pool.query('SELECT equippedCosmeticId FROM users WHERE id = ?', [userId]);
+                const { rows: userRows } = await pool.query('SELECT "equippedCosmeticId" FROM users WHERE id = $1', [userId]);
                 const equippedId = userRows[0]?.equippedCosmeticId || null;
                 if (equippedId) {
-                    const [cosRows] = await pool.query('SELECT color, imageUrl FROM cosmetics WHERE id = ?', [equippedId]);
+                    const { rows: cosRows } = await pool.query('SELECT color, "imageUrl" FROM cosmetics WHERE id = $1', [equippedId]);
                     cosmeticColor = cosRows[0]?.color || null;
                     cosmeticIcon = cosRows[0]?.imageUrl || null;
                 }

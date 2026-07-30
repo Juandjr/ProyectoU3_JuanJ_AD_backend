@@ -79,7 +79,7 @@ router.get('/payphone/success', async (req, res) => {
     const pool = db.getPool();
     const pkg = paymentService.COIN_PACKAGES[packageId];
     if (pkg) {
-       await pool.query('UPDATE users SET coins = coins + ? WHERE id = ?', [pkg.coins, userId]);
+       await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [pkg.coins, userId]);
        logger.info(`PayPhone payment successful for ${userId}, added ${pkg.coins} coins.`);
     }
     res.send('<html><head><style>body{background:#1a262f;color:#7fffd4;font-family:sans-serif;text-align:center;padding:50px;}</style></head><body><h2>¡Pago con PayPhone completado!</h2><p>Tus monedas han sido agregadas exitosamente. Puedes cerrar esta ventana.</p><script>setTimeout(() => window.close(), 3000);</script></body></html>');

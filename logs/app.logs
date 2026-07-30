@@ -1,0 +1,6 @@
+2026-07-30T23:24:16.529Z [error] PostgreSQL connection error (ENOTFOUND) tenant/user postgres.sqlqtxpjefcudhctyusu not found {"length":84,"name":"error","severity":"FATAL","code":"XX000","stack":"error: (ENOTFOUND) tenant/user postgres.sqlqtxpjefcudhctyusu not found\n    at F:\\7mo Semestre\\Aplicaciones distribuidas\\U3\\ProyectoInd_JuanJ\\backend\\node_modules\\pg-pool\\index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async connect (F:\\7mo Semestre\\Aplicaciones distribuidas\\U3\\ProyectoInd_JuanJ\\backend\\db.js:21:20)"}
+2026-07-30T23:25:24.224Z [warn] No SUPABASE_DB_URL or SUPABASE_DB_PASSWORD set. Using supabase-js REST client for queries. 
+2026-07-30T23:32:36.706Z [info] Seeded default cosmetics 
+2026-07-30T23:32:49.778Z [info] Servidor iniciado en puerto 3000 
+2026-07-30T23:32:51.064Z [info] PostgreSQL (Supabase) connected — schema ready 
+2026-07-30T23:32:51.065Z [info] Database connection established 

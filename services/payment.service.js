@@ -184,7 +184,7 @@ async function addCoinsToUser(userId, packageId) {
   if (!pkg) throw new Error('Paquete inválido');
 
   const pool = db.getPool();
-  await pool.query('UPDATE users SET coins = coins + ? WHERE id = ?', [pkg.coins, userId]);
+  await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [pkg.coins, userId]);
   logger.info(`Added ${pkg.coins} coins to user ${userId}`);
 }
 

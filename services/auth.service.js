@@ -43,7 +43,7 @@ async function refreshToken(token) {
   }
 
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT id, username, status FROM users WHERE id = ? LIMIT 1', [payload.sub]);
+  const { rows } = await pool.query('SELECT id, username, status FROM users WHERE id = $1 LIMIT 1', [payload.sub]);
   if (rows.length === 0) {
     throw new Error('User not found');
   }
@@ -61,10 +61,10 @@ function generateVerificationCode() {
 
 async function registerLocal({ username, email, password }) {
   const pool = db.getPool();
-  const conn = await pool.getConnection();
+  const conn = await pool.connect();
   try {
-    await conn.beginTransaction();
-    const [existing] = await conn.query('SELECT id, username, email, status FROM users WHERE username = ? OR email = ? LIMIT 1', [username, email]);
+    await conn.query('BEGIN');
+    const { rows: existing } = await conn.query('SELECT id, username, email, status FROM users WHERE username = $1 OR email = $2 LIMIT 1', [username, email]);
     
     let existingUser = null;
     if (existing.length > 0) {
@@ -74,7 +74,6 @@ async function registerLocal({ username, email, password }) {
         if (existingUser.username === username) throw new Error('Username already exists');
         throw new Error('Username or email already exists');
       }
-      // If inactive, we overwrite the inactive user
     }
 
     const passwordHash = await hashPassword(password);
@@ -84,31 +83,30 @@ async function registerLocal({ username, email, password }) {
     let userId;
     if (existingUser && existingUser.status === 'inactive') {
       await conn.query(
-        'UPDATE users SET username = ?, passwordHash = ?, verificationCode = ?, verificationExpiresAt = ?, verificationAttempts = 0 WHERE id = ?',
+        'UPDATE users SET username = $1, "passwordHash" = $2, "verificationCode" = $3, "verificationExpiresAt" = $4, "verificationAttempts" = 0 WHERE id = $5',
         [username, passwordHash, code, expiresAt, existingUser.id]
       );
       userId = existingUser.id;
     } else {
-      const [res] = await conn.query(
-        'INSERT INTO users (username, email, passwordHash, oauthProvider, status, verificationCode, verificationExpiresAt, verificationAttempts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      const res = await conn.query(
+        'INSERT INTO users (username, email, "passwordHash", "oauthProvider", status, "verificationCode", "verificationExpiresAt", "verificationAttempts") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
         [username, email, passwordHash, 'local', 'inactive', code, expiresAt, 0]
       );
-      userId = res.insertId;
+      userId = res.rows[0].id;
     }
 
-    // Try sending mail, log error if fails but transaction commits so code is in DB
     try {
       await emailService.sendVerificationEmail({ name: username, email, code, expirationMinutes: CODE_TTL_MINUTES });
     } catch (mailErr) {
       logger.error('Failed to send verification email during registration', { error: mailErr.message });
     }
 
-    await conn.commit();
+    await conn.query('COMMIT');
     const user = { id: userId, username, email, status: 'inactive' };
     logger.info('User registered (inactive)', { username, email });
     return user;
   } catch (err) {
-    await conn.rollback();
+    await conn.query('ROLLBACK');
     throw err;
   } finally {
     conn.release();
@@ -117,7 +115,7 @@ async function registerLocal({ username, email, password }) {
 
 async function loginLocal({ username, password }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT * FROM users WHERE username = ? LIMIT 1', [username]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE username = $1 LIMIT 1', [username]);
   if (rows.length === 0) throw new Error('Invalid credentials');
   const user = rows[0];
   if (!user.passwordHash) throw new Error('Local login not configured for this user');
@@ -139,7 +137,7 @@ async function loginLocal({ username, password }) {
 
 async function verifyRegisterCode({ email, code }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
   if (rows.length === 0) throw new Error('No existe una cuenta con ese correo');
   const user = rows[0];
 
@@ -158,12 +156,12 @@ async function verifyRegisterCode({ email, code }) {
 
   if (user.verificationCode !== String(code).trim()) {
     const attempts = user.verificationAttempts + 1;
-    await pool.query('UPDATE users SET verificationAttempts = ? WHERE id = ?', [attempts, user.id]);
+    await pool.query('UPDATE users SET "verificationAttempts" = $1 WHERE id = $2', [attempts, user.id]);
     throw new Error(`Código incorrecto. Intentos restantes: ${MAX_VERIFICATION_ATTEMPTS - attempts}`);
   }
 
   await pool.query(
-    'UPDATE users SET status = "active", verificationCode = NULL, verificationExpiresAt = NULL, verificationAttempts = 0 WHERE id = ?',
+    'UPDATE users SET status = \'active\', "verificationCode" = NULL, "verificationExpiresAt" = NULL, "verificationAttempts" = 0 WHERE id = $1',
     [user.id]
   );
 
@@ -174,7 +172,7 @@ async function verifyRegisterCode({ email, code }) {
 
 async function resendRegisterCode({ email }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
   if (rows.length === 0) throw new Error('No existe una cuenta con ese correo');
   const user = rows[0];
 
@@ -186,7 +184,7 @@ async function resendRegisterCode({ email }) {
   const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000);
 
   await pool.query(
-    'UPDATE users SET verificationCode = ?, verificationExpiresAt = ?, verificationAttempts = 0 WHERE id = ?',
+    'UPDATE users SET "verificationCode" = $1, "verificationExpiresAt" = $2, "verificationAttempts" = 0 WHERE id = $3',
     [code, expiresAt, user.id]
   );
 
@@ -197,20 +195,18 @@ async function resendRegisterCode({ email }) {
 
 async function requestPasswordRecovery({ email }) {
   const pool = db.getPool();
-  // We can look up by email
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
   
-  // Security best practice: don't reveal if user does not exist
   if (rows.length === 0) {
     return { message: 'Si el correo está registrado, recibirás un enlace de recuperación en breve.' };
   }
   const user = rows[0];
 
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
   await pool.query(
-    'UPDATE users SET recoveryToken = ?, recoveryTokenExpiresAt = ? WHERE id = ?',
+    'UPDATE users SET "recoveryToken" = $1, "recoveryTokenExpiresAt" = $2 WHERE id = $3',
     [token, expiresAt, user.id]
   );
 
@@ -223,7 +219,7 @@ async function requestPasswordRecovery({ email }) {
 
 async function resetPassword({ email, token, newPassword }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
   if (rows.length === 0) throw new Error('Token inválido o expirado.');
   const user = rows[0];
 
@@ -242,7 +238,7 @@ async function resetPassword({ email, token, newPassword }) {
 
   const passwordHash = await hashPassword(cleanPassword);
   await pool.query(
-    'UPDATE users SET passwordHash = ?, recoveryToken = NULL, recoveryTokenExpiresAt = NULL WHERE id = ?',
+    'UPDATE users SET "passwordHash" = $1, "recoveryToken" = NULL, "recoveryTokenExpiresAt" = NULL WHERE id = $2',
     [passwordHash, user.id]
   );
 
@@ -260,32 +256,31 @@ async function loginOrRegisterGoogle(idToken) {
   const normalizedUsername = usernameBase || email;
 
   const pool = db.getPool();
-  const conn = await pool.getConnection();
+  const conn = await pool.connect();
   try {
-    await conn.beginTransaction();
-    const [userByEmail] = await conn.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+    await conn.query('BEGIN');
+    const { rows: userByEmail } = await conn.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
     let user;
     if (userByEmail.length > 0) {
       user = userByEmail[0];
-      // Google users are automatically activated if they were inactive
       if (user.status !== 'active') {
-        await conn.query('UPDATE users SET status = "active", verificationCode = NULL, verificationExpiresAt = NULL WHERE id = ?', [user.id]);
+        await conn.query('UPDATE users SET status = \'active\', "verificationCode" = NULL, "verificationExpiresAt" = NULL WHERE id = $1', [user.id]);
         user.status = 'active';
       }
     } else {
-      const [duplicate] = await conn.query('SELECT username FROM users WHERE username = ? LIMIT 1', [normalizedUsername]);
+      const { rows: duplicate } = await conn.query('SELECT username FROM users WHERE username = $1 LIMIT 1', [normalizedUsername]);
       let usernameToSave = normalizedUsername;
       if (duplicate.length > 0) {
         usernameToSave = `${normalizedUsername}_${Date.now()}`;
       }
-      const [res] = await conn.query('INSERT INTO users (username, email, oauthProvider, status) VALUES (?, ?, ?, ?)', [usernameToSave, email, 'google', 'active']);
-      user = { id: res.insertId, username: usernameToSave, email, status: 'active' };
+      const res = await conn.query('INSERT INTO users (username, email, "oauthProvider", status) VALUES ($1, $2, $3, $4) RETURNING id', [usernameToSave, email, 'google', 'active']);
+      user = { id: res.rows[0].id, username: usernameToSave, email, status: 'active' };
     }
-    await conn.commit();
+    await conn.query('COMMIT');
     const token = signToken({ sub: user.id, username: user.username });
     return { user, token };
   } catch (err) {
-    await conn.rollback();
+    await conn.query('ROLLBACK');
     throw err;
   } finally {
     conn.release();
@@ -305,7 +300,7 @@ const MFA_ISSUER = process.env.MFA_ISSUER || 'Aplicaciones Distribuidas';
 
 async function startMfaSetup({ userId }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [userId]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [userId]);
   if (rows.length === 0) throw new Error('Usuario no encontrado');
   const user = rows[0];
 
@@ -315,14 +310,14 @@ async function startMfaSetup({ userId }) {
   const otpauth = authenticator.keyuri(user.email, MFA_ISSUER, secret);
   const qrCode = await QRCode.toDataURL(otpauth);
 
-  await pool.query('UPDATE users SET pendingMfaSecret = ? WHERE id = ?', [secret, userId]);
+  await pool.query('UPDATE users SET "pendingMfaSecret" = $1 WHERE id = $2', [secret, userId]);
 
   return { message: 'Escanea el QR con tu app autenticadora', qrCode, manualKey: secret };
 }
 
 async function confirmMfaSetup({ userId, code }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT * FROM users WHERE id = ? LIMIT 1', [userId]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [userId]);
   if (rows.length === 0) throw new Error('Usuario no encontrado');
   const user = rows[0];
 
@@ -333,7 +328,7 @@ async function confirmMfaSetup({ userId, code }) {
   if (!isValid) throw new Error('Código incorrecto. Revisa la hora de tu dispositivo o espera el próximo código.');
 
   await pool.query(
-    'UPDATE users SET mfaEnabled = 1, mfaSecret = ?, pendingMfaSecret = NULL WHERE id = ?',
+    'UPDATE users SET "mfaEnabled" = TRUE, "mfaSecret" = $1, "pendingMfaSecret" = NULL WHERE id = $2',
     [user.pendingMfaSecret, userId]
   );
 
@@ -344,7 +339,7 @@ async function confirmMfaSetup({ userId, code }) {
 async function disableMfa({ userId }) {
   const pool = db.getPool();
   await pool.query(
-    'UPDATE users SET mfaEnabled = 0, mfaSecret = NULL, pendingMfaSecret = NULL WHERE id = ?',
+    'UPDATE users SET "mfaEnabled" = FALSE, "mfaSecret" = NULL, "pendingMfaSecret" = NULL WHERE id = $1',
     [userId]
   );
   logger.info('MFA disabled for user', { userId });
@@ -353,7 +348,7 @@ async function disableMfa({ userId }) {
 
 async function verifyMfaLogin({ email, code }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
   if (rows.length === 0) throw new Error('Credenciales inválidas');
   const user = rows[0];
 
@@ -370,10 +365,11 @@ async function verifyMfaLogin({ email, code }) {
 
 async function getMfaStatus({ userId }) {
   const pool = db.getPool();
-  const [rows] = await pool.query('SELECT mfaEnabled FROM users WHERE id = ? LIMIT 1', [userId]);
+  const { rows } = await pool.query('SELECT "mfaEnabled" FROM users WHERE id = $1 LIMIT 1', [userId]);
   if (rows.length === 0) throw new Error('Usuario no encontrado');
   return { mfaEnabled: !!rows[0].mfaEnabled };
 }
+
 
 module.exports = {
   hashPassword,

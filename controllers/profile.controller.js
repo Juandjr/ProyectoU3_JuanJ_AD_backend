@@ -9,28 +9,28 @@ async function getProfile(req, res) {
     const pool = db.getPool();
 
     // Fetch user info
-    const [userRows] = await pool.query(
-      'SELECT id, username, email, oauthProvider, status, mfaEnabled, createdAt FROM users WHERE id = ? LIMIT 1',
+    const { rows: userRows } = await pool.query(
+      'SELECT id, username, email, "oauthProvider", status, "mfaEnabled", "createdAt" FROM users WHERE id = $1 LIMIT 1',
       [userId]
     );
     if (userRows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
     const user = userRows[0];
 
     // Fetch stats from results table
-    const [statsRows] = await pool.query(
+    const { rows: statsRows } = await pool.query(
       `SELECT 
-        COUNT(*) AS gamesPlayed,
-        COALESCE(MAX(score), 0) AS highestScore,
-        COALESCE(SUM(score), 0) AS totalScore,
-        COALESCE(AVG(score), 0) AS averageScore
-       FROM results WHERE userId = ?`,
+        COUNT(*) AS "gamesPlayed",
+        COALESCE(MAX(score), 0) AS "highestScore",
+        COALESCE(SUM(score), 0) AS "totalScore",
+        COALESCE(AVG(score), 0) AS "averageScore"
+       FROM results WHERE "userId" = $1`,
       [userId]
     );
     const stats = statsRows[0];
 
     // Fetch recent results (last 5)
-    const [recentResults] = await pool.query(
-      'SELECT score, date FROM results WHERE userId = ? ORDER BY date DESC LIMIT 5',
+    const { rows: recentResults } = await pool.query(
+      'SELECT score, date FROM results WHERE "userId" = $1 ORDER BY date DESC LIMIT 5',
       [userId]
     );
 

@@ -10,9 +10,9 @@ router.get('/items', jwtMiddleware, async (req, res) => {
     const userId = req.user.sub;
     const pool = db.getPool();
 
-    const [items] = await pool.query('SELECT * FROM cosmetics');
-    const [ownedRows] = await pool.query('SELECT cosmeticId FROM user_cosmetics WHERE userId = ?', [userId]);
-    const [userRows] = await pool.query('SELECT coins, equippedCosmeticId FROM users WHERE id = ?', [userId]);
+    const { rows: items } = await pool.query('SELECT * FROM cosmetics');
+    const { rows: ownedRows } = await pool.query('SELECT "cosmeticId" FROM user_cosmetics WHERE "userId" = $1', [userId]);
+    const { rows: userRows } = await pool.query('SELECT coins, "equippedCosmeticId" FROM users WHERE id = $1', [userId]);
 
     const ownedIds = ownedRows.map(r => r.cosmeticId);
     const coins = userRows[0]?.coins || 0;
@@ -46,15 +46,15 @@ router.post('/buy', jwtMiddleware, async (req, res) => {
     const pool = db.getPool();
     
     // Check if already owned
-    const [ownedRows] = await pool.query('SELECT * FROM user_cosmetics WHERE userId = ? AND cosmeticId = ?', [userId, itemId]);
+    const { rows: ownedRows } = await pool.query('SELECT * FROM user_cosmetics WHERE "userId" = $1 AND "cosmeticId" = $2', [userId, itemId]);
     if (ownedRows.length > 0) return res.status(400).json({ error: 'Ya posees este aspecto' });
 
     // Get item and user coins
-    const [itemRows] = await pool.query('SELECT price FROM cosmetics WHERE id = ?', [itemId]);
+    const { rows: itemRows } = await pool.query('SELECT price FROM cosmetics WHERE id = $1', [itemId]);
     if (itemRows.length === 0) return res.status(404).json({ error: 'Aspecto no encontrado' });
     const price = itemRows[0].price;
 
-    const [userRows] = await pool.query('SELECT coins FROM users WHERE id = ?', [userId]);
+    const { rows: userRows } = await pool.query('SELECT coins FROM users WHERE id = $1', [userId]);
     const coins = userRows[0]?.coins || 0;
 
     if (coins < price) {
@@ -62,8 +62,8 @@ router.post('/buy', jwtMiddleware, async (req, res) => {
     }
 
     // Process purchase
-    await pool.query('UPDATE users SET coins = coins - ? WHERE id = ?', [price, userId]);
-    await pool.query('INSERT INTO user_cosmetics (userId, cosmeticId) VALUES (?, ?)', [userId, itemId]);
+    await pool.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [price, userId]);
+    await pool.query('INSERT INTO user_cosmetics ("userId", "cosmeticId") VALUES ($1, $2)', [userId, itemId]);
 
     logger.info(`User ${userId} bought cosmetic ${itemId} for ${price} coins`);
 
@@ -83,22 +83,22 @@ router.post('/equip', jwtMiddleware, async (req, res) => {
 
     if (!itemId) {
       // Unequip (set to null)
-      await pool.query('UPDATE users SET equippedCosmeticId = NULL WHERE id = ?', [userId]);
+      await pool.query('UPDATE users SET "equippedCosmeticId" = NULL WHERE id = $1', [userId]);
       return res.json({ success: true, equippedCosmeticId: null, equippedColor: null });
     }
 
     // Verify user owns the cosmetic
-    const [ownedRows] = await pool.query('SELECT * FROM user_cosmetics WHERE userId = ? AND cosmeticId = ?', [userId, itemId]);
+    const { rows: ownedRows } = await pool.query('SELECT * FROM user_cosmetics WHERE "userId" = $1 AND "cosmeticId" = $2', [userId, itemId]);
     if (ownedRows.length === 0) {
       return res.status(400).json({ error: 'No posees este aspecto' });
     }
 
     // Get the cosmetic color
-    const [cosmeticRows] = await pool.query('SELECT color FROM cosmetics WHERE id = ?', [itemId]);
+    const { rows: cosmeticRows } = await pool.query('SELECT color FROM cosmetics WHERE id = $1', [itemId]);
     const color = cosmeticRows[0]?.color || '#7fffd4';
 
     // Update equipped cosmetic
-    await pool.query('UPDATE users SET equippedCosmeticId = ? WHERE id = ?', [itemId, userId]);
+    await pool.query('UPDATE users SET "equippedCosmeticId" = $1 WHERE id = $2', [itemId, userId]);
 
     logger.info(`User ${userId} equipped cosmetic ${itemId}`);
 
@@ -115,14 +115,14 @@ router.get('/equipped', jwtMiddleware, async (req, res) => {
     const userId = req.user.sub;
     const pool = db.getPool();
 
-    const [userRows] = await pool.query('SELECT equippedCosmeticId FROM users WHERE id = ?', [userId]);
+    const { rows: userRows } = await pool.query('SELECT "equippedCosmeticId" FROM users WHERE id = $1', [userId]);
     const equippedId = userRows[0]?.equippedCosmeticId || null;
 
     if (!equippedId) {
       return res.json({ equippedCosmeticId: null, color: null, name: null });
     }
 
-    const [cosmeticRows] = await pool.query('SELECT name, color, imageUrl FROM cosmetics WHERE id = ?', [equippedId]);
+    const { rows: cosmeticRows } = await pool.query('SELECT name, color, "imageUrl" FROM cosmetics WHERE id = $1', [equippedId]);
     const cosmetic = cosmeticRows[0];
 
     res.json({
