@@ -68,10 +68,10 @@ async function resendCode(req, res) {
 }
 
 async function forgotPassword(req, res) {
-  const { email } = req.body;
+  const { email, frontendUrl } = req.body;
   if (!email) return res.status(400).json({ error: 'Missing email' });
   try {
-    const result = await authService.requestPasswordRecovery({ email });
+    const result = await authService.requestPasswordRecovery({ email, frontendUrl });
     res.json(result);
   } catch (err) {
     logger.warn('Forgot password failed', { err: err.message });

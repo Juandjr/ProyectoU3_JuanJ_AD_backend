@@ -195,7 +195,7 @@ async function resendRegisterCode({ email }) {
   return { message: 'Código de verificación enviado' };
 }
 
-async function requestPasswordRecovery({ email }) {
+async function requestPasswordRecovery({ email, frontendUrl }) {
   const pool = db.getPool();
   const { rows } = await pool.query('SELECT * FROM public.users WHERE email = $1 LIMIT 1', [email]);
   
@@ -212,7 +212,7 @@ async function requestPasswordRecovery({ email }) {
     [token, expiresAt, user.id]
   );
 
-  const frontendBaseUrl = process.env.FRONTEND_URL || process.env.PUBLIC_APP_URL || 'http://localhost:4200';
+  const frontendBaseUrl = frontendUrl || process.env.FRONTEND_URL || process.env.PUBLIC_APP_URL || 'http://localhost:4200';
   await emailService.sendPasswordRecoveryEmail({ name: user.username, email, token, baseUrl: frontendBaseUrl });
   logger.info('Password recovery requested', { email });
 

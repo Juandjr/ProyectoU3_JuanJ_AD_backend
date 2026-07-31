@@ -14,6 +14,7 @@ function getFrontendBaseUrl() {
   return String(
     process.env.FRONTEND_URL ||
     process.env.PUBLIC_APP_URL ||
+    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
     'http://localhost:4200'
   ).replace(/\/+$/, '');
 }
@@ -22,6 +23,7 @@ function getBackendBaseUrl() {
   return String(
     process.env.BACKEND_URL ||
     process.env.PUBLIC_API_URL ||
+    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
     process.env.BASE_URL ||
     'http://localhost:3000'
   ).replace(/\/+$/, '');
