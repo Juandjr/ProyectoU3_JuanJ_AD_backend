@@ -10,6 +10,23 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 const PAYPAL_BASE_URL = process.env.PAYPAL_BASE_URL;
 
+function getFrontendBaseUrl() {
+  return String(
+    process.env.FRONTEND_URL ||
+    process.env.PUBLIC_APP_URL ||
+    'http://localhost:4200'
+  ).replace(/\/+$/, '');
+}
+
+function getBackendBaseUrl() {
+  return String(
+    process.env.BACKEND_URL ||
+    process.env.PUBLIC_API_URL ||
+    process.env.BASE_URL ||
+    'http://localhost:3000'
+  ).replace(/\/+$/, '');
+}
+
 const COIN_PACKAGES = {
   package_1: { id: 'package_1', coins: 100, priceCents: 100, priceUsd: 1.00 },
   package_2: { id: 'package_2', coins: 500, priceCents: 400, priceUsd: 4.00 },
@@ -68,8 +85,8 @@ async function createPayPalOrder(userId, packageId) {
         description: `${pkg.coins} Monedas del Juego`
       }],
       application_context: {
-        return_url: `${process.env.BASE_URL}/api/payments/paypal/success`,
-        cancel_url: `${process.env.BASE_URL}/api/payments/paypal/cancel`
+        return_url: `${getBackendBaseUrl()}/api/payments/paypal/success`,
+        cancel_url: `${getBackendBaseUrl()}/api/payments/paypal/cancel`
       }
     };
 
@@ -135,8 +152,8 @@ async function createPayPhoneTransaction(userId, packageId) {
     clientTransactionId: clientTxId,
     currency: 'USD',
     reference: `${pkg.coins} Monedas del Juego`,
-    responseUrl: `${process.env.BASE_URL}/api/payments/payphone/success?tx=${clientTxId}`,
-    cancellationUrl: `${process.env.BASE_URL}/api/payments/payphone/cancel`,
+    responseUrl: `${getBackendBaseUrl()}/api/payments/payphone/success?tx=${clientTxId}`,
+    cancellationUrl: `${getBackendBaseUrl()}/api/payments/payphone/cancel`,
     storeId: PAYPHONE_STORE_ID
   };
 

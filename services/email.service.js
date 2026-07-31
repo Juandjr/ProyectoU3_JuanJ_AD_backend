@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-transporter.verify((error, success) => {
+transporter.verify((error) => {
   if (error) {
     console.error('Error al conectar con el servidor de correo:', error);
   } else {
@@ -41,8 +41,14 @@ async function sendVerificationEmail({ name, email, code, expirationMinutes }) {
 }
 
 async function sendPasswordRecoveryEmail({ name, email, token, baseUrl }) {
-  // Enlace al frontend Angular que se encargará del formulario
-  const recoveryUrl = `http://localhost:4200/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
+  const frontendBaseUrl = String(
+    baseUrl ||
+    process.env.FRONTEND_URL ||
+    process.env.PUBLIC_APP_URL ||
+    process.env.BASE_URL ||
+    'http://localhost:4200'
+  ).replace(/\/+$/, '');
+  const recoveryUrl = `${frontendBaseUrl}/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
 
   const mailOptions = {
     from: `"Aplicaciones Distribuidas" <${process.env.EMAIL_USER}>`,

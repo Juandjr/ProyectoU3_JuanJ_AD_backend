@@ -212,8 +212,8 @@ async function requestPasswordRecovery({ email }) {
     [token, expiresAt, user.id]
   );
 
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-  await emailService.sendPasswordRecoveryEmail({ name: user.username, email, token, baseUrl });
+  const frontendBaseUrl = process.env.FRONTEND_URL || process.env.PUBLIC_APP_URL || 'http://localhost:4200';
+  await emailService.sendPasswordRecoveryEmail({ name: user.username, email, token, baseUrl: frontendBaseUrl });
   logger.info('Password recovery requested', { email });
 
   return { message: 'Si el correo está registrado, recibirás un enlace de recuperación en breve.' };
