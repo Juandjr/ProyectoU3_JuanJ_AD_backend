@@ -14,7 +14,6 @@ function getFrontendBaseUrl() {
   return String(
     process.env.FRONTEND_URL ||
     process.env.PUBLIC_APP_URL ||
-    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
     'http://localhost:4200'
   ).replace(/\/+$/, '');
 }
@@ -84,11 +83,11 @@ async function createPayPalOrder(userId, packageId) {
           currency_code: 'USD',
           value: pkg.priceUsd.toFixed(2)
         },
-        description: `${pkg.coins} Monedas del Juego`
+      description: `${pkg.coins} Monedas del Juego`
       }],
       application_context: {
-        return_url: `${getBackendBaseUrl()}/api/payments/paypal/success`,
-        cancel_url: `${getBackendBaseUrl()}/api/payments/paypal/cancel`
+        return_url: `${getFrontendBaseUrl()}/payment/complete?gateway=paypal`,
+        cancel_url: `${getFrontendBaseUrl()}/payment/complete?gateway=paypal&canceled=1`
       }
     };
 
@@ -140,6 +139,10 @@ async function capturePayPalOrder(orderId) {
   }
 }
 
+async function confirmPayPalOrder(orderId) {
+  return capturePayPalOrder(orderId);
+}
+
 // PayPhone create transaction
 async function createPayPhoneTransaction(userId, packageId) {
   const pkg = COIN_PACKAGES[packageId];
@@ -154,8 +157,8 @@ async function createPayPhoneTransaction(userId, packageId) {
     clientTransactionId: clientTxId,
     currency: 'USD',
     reference: `${pkg.coins} Monedas del Juego`,
-    responseUrl: `${getBackendBaseUrl()}/api/payments/payphone/success?tx=${clientTxId}`,
-    cancellationUrl: `${getBackendBaseUrl()}/api/payments/payphone/cancel`,
+    responseUrl: `${getFrontendBaseUrl()}/payment/complete?gateway=payphone&tx=${clientTxId}`,
+    cancellationUrl: `${getFrontendBaseUrl()}/payment/complete?gateway=payphone&canceled=1`,
     storeId: PAYPHONE_STORE_ID
   };
 
@@ -207,9 +210,27 @@ async function addCoinsToUser(userId, packageId) {
   logger.info(`Added ${pkg.coins} coins to user ${userId}`);
 }
 
+async function confirmPayPhoneTransaction(tx) {
+  if (!tx) throw new Error('Transaction ID no encontrado');
+
+  const parts = tx.split('_');
+  const userIdStr = parts[0];
+  const packageId = parts.slice(1, parts.length - 1).join('_');
+  const userId = parseInt(userIdStr, 10);
+  if (!userId || !packageId) throw new Error('Transaction ID inválido');
+
+  const pkg = COIN_PACKAGES[packageId];
+  if (!pkg) throw new Error('Paquete inválido');
+
+  await addCoinsToUser(userId, packageId);
+  return { success: true, coinsAdded: pkg.coins };
+}
+
 module.exports = {
   createPayPalOrder,
   capturePayPalOrder,
+  confirmPayPalOrder,
   createPayPhoneTransaction,
+  confirmPayPhoneTransaction,
   COIN_PACKAGES
 };
