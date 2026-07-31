@@ -10,7 +10,7 @@ async function getProfile(req, res) {
 
     // Fetch user info
     const { rows: userRows } = await pool.query(
-      'SELECT id, username, email, "oauthProvider", status, "mfaEnabled", "createdAt" FROM public.users WHERE id = $1 LIMIT 1',
+      'SELECT id, username, email, "oauthProvider", status, "mfaEnabled", "createdAt", "avatarUrl" FROM public.users WHERE id = $1 LIMIT 1',
       [userId]
     );
     if (userRows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -43,6 +43,7 @@ async function getProfile(req, res) {
         status: user.status,
         mfaEnabled: !!user.mfaEnabled,
         createdAt: user.createdAt,
+        avatarUrl: user.avatarUrl,
       },
       stats: {
         gamesPlayed: parseInt(stats.gamesPlayed || 0, 10),

@@ -82,6 +82,7 @@ async function ensureSchema() {
       "pendingMfaSecret" VARCHAR(100) DEFAULT NULL,
       coins INT DEFAULT 0,
       "equippedCosmeticId" INT DEFAULT NULL,
+      "avatarUrl" TEXT DEFAULT NULL,
       "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
