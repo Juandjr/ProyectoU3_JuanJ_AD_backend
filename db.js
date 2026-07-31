@@ -88,6 +88,11 @@ async function ensureSchema() {
   `);
 
   await pool.query(`
+    ALTER TABLE public.users
+    ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT DEFAULT NULL;
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS public.cosmetics (
       id SERIAL PRIMARY KEY,
       name VARCHAR(100) NOT NULL,
