@@ -10,8 +10,9 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 const PAYPAL_BASE_URL = process.env.PAYPAL_BASE_URL;
 
-function getFrontendBaseUrl() {
+function getFrontendBaseUrl(frontendUrl) {
   return String(
+    frontendUrl ||
     process.env.FRONTEND_URL ||
     process.env.PUBLIC_APP_URL ||
     'http://localhost:4200'
@@ -69,7 +70,7 @@ async function getPayPalAccessToken() {
 }
 
 // PayPal create order
-async function createPayPalOrder(userId, packageId) {
+async function createPayPalOrder(userId, packageId, frontendUrl) {
   const pkg = COIN_PACKAGES[packageId];
   if (!pkg) throw new Error('Paquete inválido');
 
@@ -86,8 +87,8 @@ async function createPayPalOrder(userId, packageId) {
       description: `${pkg.coins} Monedas del Juego`
       }],
       application_context: {
-        return_url: `${getFrontendBaseUrl()}/payment/complete?gateway=paypal`,
-        cancel_url: `${getFrontendBaseUrl()}/payment/complete?gateway=paypal&canceled=1`
+        return_url: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=paypal`,
+        cancel_url: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=paypal&canceled=1`
       }
     };
 
@@ -144,7 +145,7 @@ async function confirmPayPalOrder(orderId) {
 }
 
 // PayPhone create transaction
-async function createPayPhoneTransaction(userId, packageId) {
+async function createPayPhoneTransaction(userId, packageId, frontendUrl) {
   const pkg = COIN_PACKAGES[packageId];
   if (!pkg) throw new Error('Paquete inválido');
 
@@ -157,8 +158,8 @@ async function createPayPhoneTransaction(userId, packageId) {
     clientTransactionId: clientTxId,
     currency: 'USD',
     reference: `${pkg.coins} Monedas del Juego`,
-    responseUrl: `${getFrontendBaseUrl()}/payment/complete?gateway=payphone&tx=${clientTxId}`,
-    cancellationUrl: `${getFrontendBaseUrl()}/payment/complete?gateway=payphone&canceled=1`,
+    responseUrl: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=payphone&tx=${clientTxId}`,
+    cancellationUrl: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=payphone&canceled=1`,
     storeId: PAYPHONE_STORE_ID
   };
 

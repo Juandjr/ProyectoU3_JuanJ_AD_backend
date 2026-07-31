@@ -11,9 +11,9 @@ function getErrorMessage(err) {
 
 router.post('/paypal/create', jwtMiddleware, async (req, res) => {
   try {
-    const { packageId } = req.body;
+    const { packageId, frontendUrl } = req.body;
     const userId = req.user.sub;
-    const order = await paymentService.createPayPalOrder(userId, packageId);
+    const order = await paymentService.createPayPalOrder(userId, packageId, frontendUrl);
     res.json(order);
   } catch (err) {
     res.status(400).json({ error: getErrorMessage(err) });
@@ -42,9 +42,9 @@ router.post('/paypal/confirm', async (req, res) => {
 
 router.post('/payphone/create', jwtMiddleware, async (req, res) => {
   try {
-    const { packageId } = req.body;
+    const { packageId, frontendUrl } = req.body;
     const userId = req.user.sub;
-    const result = await paymentService.createPayPhoneTransaction(userId, packageId);
+    const result = await paymentService.createPayPhoneTransaction(userId, packageId, frontendUrl);
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: getErrorMessage(err) });
