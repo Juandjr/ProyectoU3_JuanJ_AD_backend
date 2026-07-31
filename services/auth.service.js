@@ -279,8 +279,11 @@ async function loginOrRegisterGoogle(idToken) {
       user = { id: res.rows[0].id, username: usernameToSave, email, status: 'active' };
     }
     await conn.query('COMMIT');
+    if (user.mfaEnabled) {
+      return { user: { id: user.id, username: user.username, email: user.email }, requiresMfa: true };
+    }
     const token = signToken({ sub: user.id, username: user.username });
-    return { user, token };
+    return { user, token, requiresMfa: false };
   } catch (err) {
     await conn.query('ROLLBACK');
     throw err;

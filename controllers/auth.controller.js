@@ -35,8 +35,11 @@ async function google(req, res) {
   const { idToken } = req.body;
   if (!idToken) return res.status(400).json({ error: 'Missing idToken' });
   try {
-    const { user, token } = await authService.loginOrRegisterGoogle(idToken);
-    res.json({ token, user: { id: user.id, username: user.username } });
+    const result = await authService.loginOrRegisterGoogle(idToken);
+    if (result.requiresMfa) {
+      return res.json({ requiresMfa: true, email: result.user.email });
+    }
+    res.json({ token: result.token, user: { id: result.user.id, username: result.user.username }, requiresMfa: false });
   } catch (err) {
     logger.error('Google auth failed', { err: err.message });
     res.status(400).json({ error: err.message });
