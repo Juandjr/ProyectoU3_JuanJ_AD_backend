@@ -3,15 +3,16 @@ const logger = require('../logger');
 
 async function register(req, res) {
   const { username, email, password, passwordConfirm } = req.body;
-  if (!username || !email || !password || !passwordConfirm) return res.status(400).json({ error: 'Missing fields' });
-  if (password !== passwordConfirm) return res.status(400).json({ error: 'Passwords do not match' });
+  if (!username || !email || !password || !passwordConfirm) return res.status(400).json({ error: 'Faltan campos obligatorios' });
+  if (password !== passwordConfirm) return res.status(400).json({ error: 'Las contraseñas no coinciden' });
   try {
     const user = await authService.registerLocal({ username, email, password });
     res.json({ id: user.id, username: user.username, email: user.email });
   } catch (err) {
-    logger.warn('Register failed', { err: err.message });
-    const status = err.message && err.message.includes('exists') ? 409 : 400;
-    res.status(status).json({ error: err.message });
+    logger.error('Register failed:', { error: err.message, stack: err.stack });
+    const isDuplicate = err.message && (err.message.includes('exists') || err.message.includes('duplicate') || err.message.includes('unique'));
+    const status = isDuplicate ? 409 : 500;
+    res.status(status).json({ error: err.message || 'Error en el servidor al registrar usuario' });
   }
 }
 

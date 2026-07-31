@@ -96,7 +96,9 @@ async function registerLocal({ username, email, password }) {
     }
 
     try {
-      await emailService.sendVerificationEmail({ name: username, email, code, expirationMinutes: CODE_TTL_MINUTES });
+      if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
+        await emailService.sendVerificationEmail({ name: username, email, code, expirationMinutes: CODE_TTL_MINUTES });
+      }
     } catch (mailErr) {
       logger.error('Failed to send verification email during registration', { error: mailErr.message });
     }
