@@ -29,14 +29,15 @@ const PORT = process.env.PORT || 3000;
 
 // Connect DB (non-blocking - server runs even if DB fails for development)
 let dbConnected = false;
-db.connect()
-    .then(() => {
+async function bootstrapDatabase() {
+    try {
+        await db.connect();
         dbConnected = true;
         logger.info('Database connection established');
-    })
-    .catch(err => {
+    } catch (err) {
         logger.warn('Database connection failed - running in degraded mode', { error: err.message });
-    });
+    }
+}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -367,10 +368,10 @@ io.on('connection', (socket) => {
         try {
             if (dbConnected && userId) {
                 const pool = db.getPool();
-                const { rows: userRows } = await pool.query('SELECT "equippedCosmeticId" FROM users WHERE id = $1', [userId]);
+                const { rows: userRows } = await pool.query('SELECT "equippedCosmeticId" FROM public.users WHERE id = $1', [userId]);
                 const equippedId = userRows[0]?.equippedCosmeticId || null;
                 if (equippedId) {
-                    const { rows: cosRows } = await pool.query('SELECT color, "imageUrl" FROM cosmetics WHERE id = $1', [equippedId]);
+                    const { rows: cosRows } = await pool.query('SELECT color, "imageUrl" FROM public.cosmetics WHERE id = $1', [equippedId]);
                     cosmeticColor = cosRows[0]?.color || null;
                     cosmeticIcon = cosRows[0]?.imageUrl || null;
                 }
@@ -629,4 +630,9 @@ function startServer(port, attempt = 1) {
     });
 }
 
-startServer(PORT);
+async function bootstrap() {
+    await bootstrapDatabase();
+    startServer(PORT);
+}
+
+bootstrap();

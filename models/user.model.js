@@ -6,7 +6,7 @@ const db = require('../db');
 
 async function find(filter = {}, projection = {}) {
   const pool = db.getPool();
-  const { rows: users } = await pool.query('SELECT id, username FROM users');
+  const { rows: users } = await pool.query('SELECT id, username FROM public.users');
   // Load results for each user
   const userIds = users.map(u => u.id);
   let resultsMap = {};
@@ -22,7 +22,7 @@ async function find(filter = {}, projection = {}) {
 
 async function findById(id) {
   const pool = db.getPool();
-  const { rows } = await pool.query('SELECT id, username, email FROM users WHERE id = $1 LIMIT 1', [id]);
+    const { rows } = await pool.query('SELECT id, username, email FROM public.users WHERE id = $1 LIMIT 1', [id]);
   if (rows.length === 0) return null;
   const user = rows[0];
   const { rows: resRows } = await pool.query('SELECT id, score, difficulty, date FROM results WHERE "userId" = $1 ORDER BY date DESC', [id]);

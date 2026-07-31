@@ -2,34 +2,46 @@ const { Pool } = require('pg');
 const logger = require('./logger');
 
 let pool = null;
+let connectPromise = null;
 
 async function connect() {
-  const connectionString =
-    process.env.DATABASE_URL ||
-    process.env.AZURE_POSTGRES_URL ||
-    buildConnectionString();
-
-  const config = {
-    connectionString,
-    ssl: buildSslConfig(),
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-  };
-
-  try {
-    pool = new Pool(config);
-
-    const client = await pool.connect();
-    client.release();
-
-    await ensureSchema();
-
-    logger.info('PostgreSQL connected — schema ready');
-  } catch (err) {
-    logger.error('PostgreSQL connection error:', err.message);
-    throw err;
+  if (connectPromise) {
+    return connectPromise;
   }
+
+  connectPromise = (async () => {
+    const connectionString =
+      process.env.DATABASE_URL ||
+      process.env.AZURE_POSTGRES_URL ||
+      buildConnectionString();
+
+    const config = {
+      connectionString,
+      ssl: buildSslConfig(),
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    };
+
+    try {
+      pool = new Pool(config);
+
+      const client = await pool.connect();
+      client.release();
+
+      await ensureSchema();
+
+      logger.info('PostgreSQL connected - schema ready');
+      return pool;
+    } catch (err) {
+      logger.error('PostgreSQL connection error:', err.message);
+      pool = null;
+      connectPromise = null;
+      throw err;
+    }
+  })();
+
+  return connectPromise;
 }
 
 function buildConnectionString() {
@@ -48,6 +60,10 @@ function buildSslConfig() {
 }
 
 async function ensureSchema() {
+  await pool.query(`
+    CREATE SCHEMA IF NOT EXISTS public;
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS public.users (
       id SERIAL PRIMARY KEY,
@@ -100,10 +116,10 @@ async function ensureSchema() {
     );
   `);
 
-  const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM cosmetics');
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM public.cosmetics');
   if (rows[0].count === 0) {
     await pool.query(`
-      INSERT INTO cosmetics (name, description, price, "imageUrl", color) VALUES
+      INSERT INTO public.cosmetics (name, description, price, "imageUrl", color) VALUES
         ('Espada de Fuego', 'Una espada llameante que ilumina la oscuridad.', 500, '🔥', '#ff6b35'),
         ('Escudo de Hielo', 'Un escudo impenetrable congelado en el tiempo.', 750, '❄️', '#00d4ff'),
         ('Capa de las Sombras', 'Oculta tu presencia de los enemigos.', 1200, '🌑', '#6c3baa'),

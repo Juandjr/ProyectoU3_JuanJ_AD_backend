@@ -24,8 +24,8 @@ async function getScoreboard(req, res) {
 
     let query = `
       SELECT r.score, r.difficulty, r.date, u.username
-      FROM results r
-      JOIN users u ON u.id = r."userId"
+      FROM public.results r
+      JOIN public.users u ON u.id = r."userId"
     `;
     const params = [];
 
@@ -68,13 +68,13 @@ async function submitResult(req, res) {
     const pool = db.getPool();
 
     const { rows: existingRows } = await pool.query(
-      'SELECT id, score FROM results WHERE "userId" = $1 AND difficulty = $2 ORDER BY score DESC, date DESC LIMIT 1',
+      'SELECT id, score FROM public.results WHERE "userId" = $1 AND difficulty = $2 ORDER BY score DESC, date DESC LIMIT 1',
       [user.id, diff]
     );
 
     const coinsEarned = calculatePlayReward(score, diff);
     if (coinsEarned > 0) {
-      await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [coinsEarned, user.id]);
+      await pool.query('UPDATE public.users SET coins = coins + $1 WHERE id = $2', [coinsEarned, user.id]);
       logger.info('Added play reward coins', { userId: user.id, difficulty: diff, score, coinsEarned });
     }
 
@@ -82,9 +82,9 @@ async function submitResult(req, res) {
 
     if (score > currentBest) {
       if (existingRows[0]?.id) {
-        await pool.query('UPDATE results SET score = $1, date = NOW() WHERE id = $2', [score, existingRows[0].id]);
+        await pool.query('UPDATE public.results SET score = $1, date = NOW() WHERE id = $2', [score, existingRows[0].id]);
       } else {
-        await pool.query('INSERT INTO results ("userId", score, difficulty, date) VALUES ($1, $2, $3, NOW())', [user.id, score, diff]);
+        await pool.query('INSERT INTO public.results ("userId", score, difficulty, date) VALUES ($1, $2, $3, NOW())', [user.id, score, diff]);
       }
       return res.json({ ok: true, updated: true, difficulty: diff, score, coinsEarned });
     }
