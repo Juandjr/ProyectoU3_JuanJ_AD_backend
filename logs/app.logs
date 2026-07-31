@@ -4,3 +4,5 @@
 2026-07-30T23:32:49.778Z [info] Servidor iniciado en puerto 3000 
 2026-07-30T23:32:51.064Z [info] PostgreSQL (Supabase) connected — schema ready 
 2026-07-30T23:32:51.065Z [info] Database connection established 
+2026-07-31T00:39:21.952Z [error] PostgreSQL connection error: 
+2026-07-31T00:39:32.256Z [info] PostgreSQL (Supabase) connected — schema ready 
