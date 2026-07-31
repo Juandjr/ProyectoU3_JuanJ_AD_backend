@@ -87,8 +87,8 @@ async function createPayPalOrder(userId, packageId, frontendUrl) {
       description: `${pkg.coins} Monedas del Juego`
       }],
       application_context: {
-        return_url: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=paypal`,
-        cancel_url: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=paypal&canceled=1`
+        return_url: `${getBackendBaseUrl()}/api/payments/paypal/success?frontendUrl=${encodeURIComponent(getFrontendBaseUrl(frontendUrl))}`,
+        cancel_url: `${getBackendBaseUrl()}/api/payments/paypal/cancel?frontendUrl=${encodeURIComponent(getFrontendBaseUrl(frontendUrl))}`
       }
     };
 
@@ -158,8 +158,8 @@ async function createPayPhoneTransaction(userId, packageId, frontendUrl) {
     clientTransactionId: clientTxId,
     currency: 'USD',
     reference: `${pkg.coins} Monedas del Juego`,
-    responseUrl: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=payphone&tx=${clientTxId}`,
-    cancellationUrl: `${getFrontendBaseUrl(frontendUrl)}/payment/complete?gateway=payphone&canceled=1`,
+    responseUrl: `${getBackendBaseUrl()}/api/payments/payphone/success?tx=${clientTxId}&frontendUrl=${encodeURIComponent(getFrontendBaseUrl(frontendUrl))}`,
+    cancellationUrl: `${getBackendBaseUrl()}/api/payments/payphone/cancel?frontendUrl=${encodeURIComponent(getFrontendBaseUrl(frontendUrl))}`,
     storeId: PAYPHONE_STORE_ID
   };
 
