@@ -2,8 +2,18 @@ const fs = require('fs');
 const path = require('path');
 const { createLogger, format, transports } = require('winston');
 
-const logsDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+const loggerTransports = [new transports.Console()];
+
+// Only write to file if NOT running in Vercel / serverless environment
+if (!process.env.VERCEL) {
+  try {
+    const logsDir = path.join(__dirname, 'logs');
+    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+    loggerTransports.push(new transports.File({ filename: path.join(logsDir, 'app.logs') }));
+  } catch (err) {
+    console.warn('Could not initialize file logger transport, falling back to Console:', err.message);
+  }
+}
 
 const logger = createLogger({
   level: 'info',
@@ -14,10 +24,8 @@ const logger = createLogger({
       return `${timestamp} [${level}] ${message} ${metaStr}`;
     })
   ),
-  transports: [
-    new transports.File({ filename: path.join(logsDir, 'app.logs') }),
-    new transports.Console()
-  ]
+  transports: loggerTransports
 });
 
 module.exports = logger;
+
