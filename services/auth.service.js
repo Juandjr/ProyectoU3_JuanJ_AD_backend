@@ -83,8 +83,8 @@ async function registerLocal({ username, email, password }) {
     let userId;
     if (existingUser && existingUser.status === 'inactive') {
       await conn.query(
-        'UPDATE users SET username = $1, "passwordHash" = $2, "verificationCode" = $3, "verificationExpiresAt" = $4, "verificationAttempts" = 0 WHERE id = $5',
-        [username, passwordHash, code, expiresAt, existingUser.id]
+        'UPDATE users SET username = $1, email = $2, "passwordHash" = $3, "oauthProvider" = $4, "verificationCode" = $5, "verificationExpiresAt" = $6, "verificationAttempts" = 0 WHERE id = $7',
+        [username, email, passwordHash, 'local', code, expiresAt, existingUser.id]
       );
       userId = existingUser.id;
     } else {

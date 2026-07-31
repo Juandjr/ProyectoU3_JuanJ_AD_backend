@@ -38,7 +38,8 @@ async function connect() {
 function buildConnectionString() {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://sqlqtxpjefcudhctyusu.supabase.co';
   const projectRef = SUPABASE_URL.replace('https://', '').replace('.supabase.co', '');
-  const password = encodeURIComponent(process.env.SUPABASE_DB_PASSWORD || 'Balatrito123.');
+  const rawPassword = process.env.SUPABASE_DB_PASSWORD || 'Balatrito123.';
+  const password = encodeURIComponent(String(rawPassword).trim());
   
   return `postgresql://postgres:${password}@db.${projectRef}.supabase.co:5432/postgres`;
 }
