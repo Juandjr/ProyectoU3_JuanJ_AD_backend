@@ -303,6 +303,20 @@ io.on('connection', (socket) => {
 
     logger.info(`Jugador conectado: ${socket.id}`, { user: socket.user });
 
+    // Latency probe: echo back the exact payload without touching game state.
+    socket.on('pingTest', (payload, callback) => {
+        const response = payload && typeof payload === 'object'
+            ? { ...payload }
+            : payload;
+
+        if (typeof callback === 'function') {
+            callback(response);
+            return;
+        }
+
+        socket.emit('pongTest', response);
+    });
+
     // Enviar lista inicial de salas al conectarse
     socket.emit('roomsUpdated', getRoomsList());
 
@@ -450,7 +464,11 @@ io.on('connection', (socket) => {
             room.players[socket.id].collected = (room.players[socket.id].collected || 0) + 1;
         }
 
-        io.to(roomId).emit('resourceCollected', { playerId: socket.id, resourceId: data.resourceId });
+        io.to(roomId).emit('resourceCollected', {
+            playerId: socket.id,
+            resourceId: data.resourceId,
+            serverTimestamp: Date.now()
+        });
         io.to(roomId).emit('playersUpdated', room.players);
     });
 
