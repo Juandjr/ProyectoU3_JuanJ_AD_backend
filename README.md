@@ -1,193 +1,212 @@
-# Backend - Survival Game Server
+# ProyectoInd_JuanJ
+
+Aplicación web de juego multijugador con frontend en Angular y backend en Node.js.  
+El proyecto incluye:
+
+- autenticación con correo y contraseña
+- verificación por código y recuperación de contraseña
+- MFA
+- salas multijugador en tiempo real con `Socket.IO`
+- tablero de puntuaciones
+- perfil de usuario
+- tienda de cosméticos
+- pagos con PayPal y PayPhone
+- subida de avatar a almacenamiento remoto
+
+## Estructura del repositorio
+
+- `backend/`: API REST, sockets y lógica del juego
+- `frontend/`: aplicación Angular
+- `main.tex`: documento principal del informe
+- `Informe_Proyecto_JuanJ_Actualizado_editado.docx`: versión editable del informe
+
+## Tecnologías
+
+- Backend: Node.js, Express, Socket.IO, PostgreSQL, JWT, bcryptjs, dotenv
+- Frontend: Angular 21, TypeScript, RxJS, Socket.IO Client
+- Integraciones: Supabase, Vercel Blob, PayPal, PayPhone, Google OAuth, correo SMTP
 
 ## Requisitos
 
-- Node.js v18+ (v25.9.0 es impar y no es recomendado para producción)
-- MongoDB local o MongoDB Atlas (remoto)
+- Node.js 18 o superior
 - npm
+- Base de datos PostgreSQL accesible desde el backend
+- Variables de entorno configuradas en `backend/.env`
 
-## Instalación
+## Configuración del backend
 
-1. Instala las dependencias:
+1. Entrar a la carpeta del backend:
+
+```bash
+cd backend
+```
+
+2. Instalar dependencias:
+
 ```bash
 npm install
 ```
 
-2. Crea un archivo `.env` en la raíz del backend (basado en `.env.example`):
+3. Crear el archivo de entorno a partir del ejemplo:
+
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
-3. Configura tus credenciales en `.env`:
-   - `MONGODB_URI`: URI de conexión a MongoDB
-   - `JWT_SECRET`: Clave secreta para JWT (cambiar en producción)
-   - `SESSION_CLIENT_ID` y `SESSION_SECRET`: Credenciales de Google OAuth
-     - `SESSION_CLIENT_ID` debe ser el Client ID de tipo "Web application"
-     - Agrega `http://localhost:4200` a los Authorized JavaScript origins en Google Cloud Console
+4. Completar las variables según tu entorno. Las más importantes son:
 
-## Configuración de MongoDB
+- `JWT_SECRET`
+- `PORT`
+- `BASE_URL`
+- credenciales de correo para verificación y recuperación
+- credenciales de Google OAuth
+- credenciales de PayPal
+- credenciales de PayPhone
 
-### Opción 1: MongoDB Local (Desarrollo Rápido)
-
-1. Descarga MongoDB Community: https://www.mongodb.com/try/download/community
-2. Instala y arranca el servicio (en Windows: `mongod`)
-3. En `.env`, configura:
-```env
-MONGODB_URI=mongodb://localhost:27017/survival_game
-```
-
-### Opción 2: MongoDB Atlas (Nube - Recomendado)
-
-1. Ve a https://www.mongodb.com/cloud/atlas
-2. Crea una cuenta y un clúster
-3. Configura un usuario con contraseña
-4. Obtén la URI de conexión (como `mongodb+srv://user:password@cluster.mongodb.net/dbname`)
-5. En `.env`, configura:
-```env
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/survival_game
-```
-
-**Nota**: La URI remota ya configurada en el `.env` usa credenciales de ejemplo. Si no funciona, configura las tuyas propias desde MongoDB Atlas.
-
-## Ejecución
+### Ejecución del backend
 
 ```bash
 npm start
 ```
 
-El servidor se iniciará en el puerto 3000 (o el especificado en `PORT` del `.env`).
+Por defecto el servidor arranca en `http://localhost:3000`.
 
-### Salida esperada:
-```
-2026-06-23T01:46:50.626Z [info] Servidor iniciado en puerto 3000 
-2026-06-23T01:46:55.637Z [info] Fogata - intensidad actual: 97 
-```
-
-Si MongoDB no está disponible:
-```
-2026-06-23T01:47:20.622Z [warn] Database connection failed - running in degraded mode
-```
-
-El servidor seguirá funcionando en modo degradado, permitiendo pruebas de sockets.
-
-## Verificar Salud del Servidor
+### Salud del backend
 
 ```bash
 curl http://localhost:3000/api/health
 ```
 
-Respuesta:
+Respuesta esperada:
+
 ```json
-{"ok":true,"dbConnected":true}
+{ "ok": true, "dbConnected": true }
 ```
 
-Si `dbConnected` es `false`, MongoDB no está disponible pero el servidor sigue activo.
+Si la base de datos no responde, el servidor puede seguir levantado en modo degradado para pruebas de sockets y desarrollo local.
 
-## Endpoints de Autenticación
+## Configuración del frontend
 
-### Registro
-```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"password123"}'
-```
-
-### Login
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"password123"}'
-```
-
-Devuelve un `token` JWT que debe usarse en las llamadas posteriores.
-
-### Google OAuth
-```bash
-curl -X POST http://localhost:3000/api/auth/google \
-  -H "Content-Type: application/json" \
-  -d '{"idToken":"google-id-token-aqui"}'
-```
-
-## Estructura del Proyecto
-
-```
-backend/
-├── server.js                 # Servidor principal
-├── db.js                     # Conexión a MongoDB
-├── logger.js                 # Sistema de logs (genera logs/app.logs)
-├── entorno-worker.js         # Worker thread para ciclos día/noche
-├── models/
-│   └── user.model.js        # Modelo de usuario
-├── services/
-│   └── auth.service.js      # Lógica de autenticación
-├── controllers/
-│   ├── auth.controller.js   # Endpoints de auth
-│   └── scoreboard.controller.js  # Endpoints de scoreboard
-├── middleware/
-│   └── auth.middleware.js   # Middleware de validación JWT
-├── routes/
-│   ├── auth.routes.js       # Rutas de autenticación
-│   └── game.routes.js       # Rutas de juego
-├── logs/
-│   └── app.logs             # Log del sistema
-├── .env                     # Configuración (no incluir en git)
-├── .env.example             # Ejemplo de configuración
-└── package.json             # Dependencias
-```
-
-## Estructura de Datos (MongoDB)
-
-### Colección: users
-
-```javascript
-{
-  _id: ObjectId,
-  username: String,              // Único
-  passwordHash: String,          // Opcional (para login local)
-  oauthProvider: String,         // 'local' o 'google'
-  results: [
-    {
-      score: Number,
-      date: Date
-    }
-  ],
-  createdAt: Date
-}
-```
-
-## ACID y SOLID
-
-- **ACID**: Transacciones de Mongoose en operaciones de registro (con startSession y withTransaction)
-- **SOLID**:
-  - Single Responsibility: Cada módulo tiene una responsabilidad clara
-  - Open/Closed: Fácil extender con nuevos servicios
-  - Liskov Substitution: Servicios implementan interfaces predecibles
-  - Interface Segregation: Controladores usan solo lo necesario
-  - Dependency Inversion: Servicios inyectados, no acoplados
-
-## Solución de Problemas
-
-### Error: "MongoDB connection failed"
-- Verifica que MongoDB esté corriendo (local) o la URI sea correcta (Atlas)
-- Comprueba las credenciales en el `.env`
-- En modo degradado, el servidor sigue funcionando; usa `/api/health` para diagnosticar
-
-### Error: "JWT verification failed"
-- Asegúrate de que el token sea válido y no haya expirado
-- Verifica que `JWT_SECRET` sea el mismo en `.env`
-
-### Puerto en uso (Puerto 3000)
-- Cambia `PORT` en `.env` a otro puerto, ej: `PORT=3001`
-
-## Logging
-
-Los logs se guardan en `logs/app.logs` y se muestran en consola también.
+1. Entrar a la carpeta del frontend:
 
 ```bash
-tail -f logs/app.logs  # En Linux/Mac
-Get-Content logs/app.logs -Tail 10 -Wait  # En PowerShell Windows
+cd frontend
 ```
 
----
+2. Instalar dependencias:
 
-**Última actualización**: 2026-06-23
+```bash
+npm install
+```
+
+3. Ejecutar la app:
+
+```bash
+npm start
+```
+
+La app Angular se abre normalmente en `http://localhost:4200`.
+
+El frontend usa `src/app/utils/backend-config.ts` para apuntar al backend local o a despliegues en Render/Railway/Vercel.
+
+## Rutas principales del frontend
+
+- `/login`
+- `/login-mfa`
+- `/register`
+- `/verify`
+- `/forgot-password`
+- `/reset-password`
+- `/start`
+- `/game`
+- `/scoreboard`
+- `/profile`
+- `/store`
+- `/payment/complete`
+
+## Rutas principales del backend
+
+- `GET /api/health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/google`
+- `POST /api/auth/verify-code`
+- `POST /api/auth/resend-code`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password`
+- `GET /api/auth/mfa/status`
+- `POST /api/auth/mfa/setup`
+- `POST /api/auth/mfa/confirm`
+- `POST /api/auth/mfa/disable`
+- `POST /api/auth/mfa/verify`
+- `POST /api/auth/refresh`
+- `GET /api/profile`
+- `POST /api/profile/avatar`
+- `GET /api/store/items`
+- `POST /api/store/buy`
+- `POST /api/store/equip`
+- `GET /api/store/equipped`
+- `GET /api/scoreboard`
+- `POST /api/scoreboard`
+- `POST /api/payments/paypal/create`
+- `POST /api/payments/paypal/capture`
+- `GET /api/payments/paypal/success`
+- `GET /api/payments/paypal/cancel`
+- `POST /api/payments/paypal/confirm`
+- `POST /api/payments/payphone/create`
+- `POST /api/payments/payphone/confirm`
+- `GET /api/payments/payphone/success`
+- `GET /api/payments/payphone/cancel`
+
+## Juego en tiempo real
+
+El backend mantiene salas públicas por defecto:
+
+- `public-1` - fácil
+- `public-2` - intermedia
+- `public-3` - difícil
+
+También permite crear salas personalizadas con contraseña y dificultad.  
+La comunicación del juego se maneja con `Socket.IO` para:
+
+- unir y dejar salas
+- mover jugadores
+- recolectar recursos
+- depositar recursos para puntaje
+- actualizar la fogata
+- cambiar entre día y noche
+- sincronizar enemigos y estado del mundo
+
+## Carpetas importantes del backend
+
+- `controllers/`: lógica de los endpoints
+- `routes/`: definición de rutas HTTP
+- `services/`: servicios de autenticación y pagos
+- `middleware/`: validaciones y auth
+- `models/`: modelos y estructura de datos
+- `logs/`: archivos de log
+
+## Notas de uso
+
+- El servidor backend no se detiene si la base de datos falla al inicio; registra el error y sigue en modo degradado.
+- El frontend permite seleccionar el backend desde el almacenamiento local del navegador.
+- La subida de avatar usa `Vercel Blob`.
+
+## Desarrollo
+
+Para trabajar en ambos lados, normalmente se levantan dos terminales:
+
+```bash
+cd backend
+npm start
+```
+
+```bash
+cd frontend
+npm start
+```
+
+## Estado del proyecto
+
+Este README describe la estructura actual del proyecto y reemplaza la documentación anterior que estaba basada en otra versión del backend.
+
