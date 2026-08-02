@@ -1,115 +1,115 @@
 # ProyectoInd_JuanJ
 
-Aplicación web de juego multijugador con frontend en Angular y backend en Node.js.  
-El proyecto incluye:
+Multiplayer web game built with an Angular frontend and a Node.js backend.
+The project includes:
 
-- autenticación con correo y contraseña
-- verificación por código y recuperación de contraseña
+- email and password authentication
+- code verification and password recovery
 - MFA
-- salas multijugador en tiempo real con `Socket.IO`
-- tablero de puntuaciones
-- perfil de usuario
-- tienda de cosméticos
-- pagos con PayPal y PayPhone
-- subida de avatar a almacenamiento remoto
+- real-time multiplayer rooms with `Socket.IO`
+- scoreboard
+- user profile
+- cosmetic store
+- PayPal and PayPhone payments
+- avatar upload to remote storage
 
-## Estructura del repositorio
+## Repository Structure
 
-- `backend/`: API REST, sockets y lógica del juego
-- `frontend/`: aplicación Angular
-- `main.tex`: documento principal del informe
-- `Informe_Proyecto_JuanJ_Actualizado_editado.docx`: versión editable del informe
+- `backend/`: REST API, sockets, and game logic
+- `frontend/`: Angular application
+- `main.tex`: main report document
+- `Informe_Proyecto_JuanJ_Actualizado_editado.docx`: editable report version
 
-## Tecnologías
+## Technologies
 
 - Backend: Node.js, Express, Socket.IO, PostgreSQL, JWT, bcryptjs, dotenv
 - Frontend: Angular 21, TypeScript, RxJS, Socket.IO Client
-- Integraciones: Supabase, Vercel Blob, PayPal, PayPhone, Google OAuth, correo SMTP
+- Integrations: Supabase, Vercel Blob, PayPal, PayPhone, Google OAuth, SMTP email
 
-## Requisitos
+## Requirements
 
-- Node.js 18 o superior
+- Node.js 18 or newer
 - npm
-- Base de datos PostgreSQL accesible desde el backend
-- Variables de entorno configuradas en `backend/.env`
+- PostgreSQL database accessible from the backend
+- Environment variables configured in `backend/.env`
 
-## Configuración del backend
+## Backend Setup
 
-1. Entrar a la carpeta del backend:
+1. Go to the backend folder:
 
 ```bash
 cd backend
 ```
 
-2. Instalar dependencias:
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Crear el archivo de entorno a partir del ejemplo:
+3. Create the environment file from the example:
 
 ```bash
 copy .env.example .env
 ```
 
-4. Completar las variables según tu entorno. Las más importantes son:
+4. Fill in the variables for your environment. The most important ones are:
 
 - `JWT_SECRET`
 - `PORT`
 - `BASE_URL`
-- credenciales de correo para verificación y recuperación
-- credenciales de Google OAuth
-- credenciales de PayPal
-- credenciales de PayPhone
+- email credentials for verification and recovery
+- Google OAuth credentials
+- PayPal credentials
+- PayPhone credentials
 
-### Ejecución del backend
+### Run the Backend
 
 ```bash
 npm start
 ```
 
-Por defecto el servidor arranca en `http://localhost:3000`.
+By default, the server runs at `http://localhost:3000`.
 
-### Salud del backend
+### Backend Health Check
 
 ```bash
 curl http://localhost:3000/api/health
 ```
 
-Respuesta esperada:
+Expected response:
 
 ```json
 { "ok": true, "dbConnected": true }
 ```
 
-Si la base de datos no responde, el servidor puede seguir levantado en modo degradado para pruebas de sockets y desarrollo local.
+If the database does not respond, the server can still stay up in degraded mode for socket testing and local development.
 
-## Configuración del frontend
+## Frontend Setup
 
-1. Entrar a la carpeta del frontend:
+1. Go to the frontend folder:
 
 ```bash
 cd frontend
 ```
 
-2. Instalar dependencias:
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Ejecutar la app:
+3. Run the app:
 
 ```bash
 npm start
 ```
 
-La app Angular se abre normalmente en `http://localhost:4200`.
+The Angular app usually runs at `http://localhost:4200`.
 
-El frontend usa `src/app/utils/backend-config.ts` para apuntar al backend local o a despliegues en Render/Railway/Vercel.
+The frontend uses `src/app/utils/backend-config.ts` to point to the local backend or to Render/Railway/Vercel deployments.
 
-## Rutas principales del frontend
+## Main Frontend Routes
 
 - `/login`
 - `/login-mfa`
@@ -124,7 +124,7 @@ El frontend usa `src/app/utils/backend-config.ts` para apuntar al backend local 
 - `/store`
 - `/payment/complete`
 
-## Rutas principales del backend
+## Main Backend Routes
 
 - `GET /api/health`
 - `POST /api/auth/register`
@@ -158,43 +158,43 @@ El frontend usa `src/app/utils/backend-config.ts` para apuntar al backend local 
 - `GET /api/payments/payphone/success`
 - `GET /api/payments/payphone/cancel`
 
-## Juego en tiempo real
+## Real-Time Game
 
-El backend mantiene salas públicas por defecto:
+The backend keeps three default public rooms:
 
-- `public-1` - fácil
-- `public-2` - intermedia
-- `public-3` - difícil
+- `public-1` - easy
+- `public-2` - medium
+- `public-3` - hard
 
-También permite crear salas personalizadas con contraseña y dificultad.  
-La comunicación del juego se maneja con `Socket.IO` para:
+It also allows custom rooms with passwords and difficulty settings.
+Game communication is handled with `Socket.IO` for:
 
-- unir y dejar salas
-- mover jugadores
-- recolectar recursos
-- depositar recursos para puntaje
-- actualizar la fogata
-- cambiar entre día y noche
-- sincronizar enemigos y estado del mundo
+- joining and leaving rooms
+- moving players
+- collecting resources
+- depositing resources for score
+- updating the campfire
+- switching between day and night
+- syncing enemies and world state
 
-## Carpetas importantes del backend
+## Important Backend Folders
 
-- `controllers/`: lógica de los endpoints
-- `routes/`: definición de rutas HTTP
-- `services/`: servicios de autenticación y pagos
-- `middleware/`: validaciones y auth
-- `models/`: modelos y estructura de datos
-- `logs/`: archivos de log
+- `controllers/`: endpoint logic
+- `routes/`: HTTP route definitions
+- `services/`: authentication and payment services
+- `middleware/`: validation and auth
+- `models/`: data structures and models
+- `logs/`: log files
 
-## Notas de uso
+## Usage Notes
 
-- El servidor backend no se detiene si la base de datos falla al inicio; registra el error y sigue en modo degradado.
-- El frontend permite seleccionar el backend desde el almacenamiento local del navegador.
-- La subida de avatar usa `Vercel Blob`.
+- The backend server does not stop if the database fails on startup; it logs the error and continues in degraded mode.
+- The frontend lets you select the backend from browser local storage.
+- Avatar upload uses `Vercel Blob`.
 
-## Desarrollo
+## Development
 
-Para trabajar en ambos lados, normalmente se levantan dos terminales:
+To work on both sides, open two terminals:
 
 ```bash
 cd backend
@@ -206,7 +206,6 @@ cd frontend
 npm start
 ```
 
-## Estado del proyecto
+## Project Status
 
-Este README describe la estructura actual del proyecto y reemplaza la documentación anterior que estaba basada en otra versión del backend.
-
+This README reflects the current project structure and replaces the previous documentation that was based on an older backend version.
